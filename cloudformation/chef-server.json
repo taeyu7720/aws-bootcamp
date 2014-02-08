@@ -1,0 +1,336 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Description": "Creates a fully equiped Chef Server stack.",
+
+    "Parameters": {
+		"KeyName": {
+			"Type": "String",
+			"Description" : "Name of an existing EC2 KeyPair to enable SSH access to the EC2 instance."
+		},
+        "NotificationEmail": {
+            "Type": "String",
+            "Description": "The email addres to which status and alarm notifications will be sent."
+        },
+        "DomainName": {
+            "Type": "String",
+            "Description": "The Domain name you've configured in Route53. (Use 'none' if you don't have a domain)",
+            "Default": "none"
+        },
+        "ARecord": {
+            "Type": "String",
+            "Description": "The A-Record that you would like to use for this Chef Server.",
+            "Default": "chef"
+        }
+    },
+
+    "Conditions": {
+        "HasDomainName": {"Fn::Not":[{"Fn::Equals": [{"Ref": "DomainName"}, "none"]}]}
+    },
+
+    "Mappings": {
+        "AWSRegion2AMI": {
+            "us-east-1"      : { "AMI": "ami-83dee0ea" },
+            "us-west-1"      : { "AMI": "ami-c45f6281" },
+            "us-west-2"      : { "AMI": "ami-d0d8b8e0" },
+            "eu-west-1"      : { "AMI": "ami-aa56a1dd" },
+            "ap-northeast-1" : { "AMI": "ami-f72e45f6" },
+            "ap-southeast-1" : { "AMI": "ami-bc7325ee" },
+            "ap-southeast-2" : { "AMI": "ami-e577e9df" },
+            "sa-east-1"      : { "AMI": "ami-d55bfbc8" }
+        },
+        "Settings" : {
+            "Chef" : {
+                "DownloadUrl"  : "https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/chef-server_11.0.10-1.ubuntu.12.04_amd64.deb",
+                "InstanceType" : "m1.medium"
+            }
+        }
+    },
+    
+    "Resources": {
+
+        "NotificationTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "Subscription": [
+                    {
+                        "Endpoint": {
+                            "Ref": "NotificationEmail"
+                        },
+                        "Protocol": "email"
+                    }
+                ]
+            }
+        },
+        "ChefServerSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security Group for the Chef server instances",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+		
+		"ChefServerEIP": {
+			"Type" : "AWS::EC2::EIP",
+			"Properties" : {
+			}
+		},
+
+		"IPAlloc": {
+		   "Type": "AWS::EC2::EIPAssociation",
+		   "Properties": {
+			  "EIP": {"Ref": "ChefServerEIP"},
+			  "InstanceId": {"Ref": "ChefServerInstance"}
+		   }
+		},
+		
+        "ChefServerInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "DisableApiTermination": "true",
+                "EbsOptimized": "false",
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "AWSRegion2AMI",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "AMI"
+                    ]
+                },
+                "InstanceType": { "Fn::FindInMap": ["Settings", "Chef", "InstanceType"]},
+                "KeyName": {"Ref": "KeyName"},
+                "Monitoring": "true",
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "ChefServerSecurityGroup"
+                    }
+                ],
+                "Tags": [
+					{"Key": "Name", "Value": {"Fn::Join": ["",[{ "Ref": "ARecord"},".",{"Ref": "DomainName"}]]}}
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "\n",
+                            [
+                                "#!/bin/bash -ex",
+                                "apt-get clean",
+                                "rm -rf /var/lib/apt/lists",
+                                "mkdir -p /var/lib/apt/lists/partial",
+                                "rm -f /var/cache/apt/*.deb",
+                                "apt-get update",
+                                "apt-get -y install python-setuptools",
+                                "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz > /var/log/easy_install.log",
+                                {
+                                    "Fn::Join": [ "",
+                                        [ "cfn-init -v -s ",{ "Ref": "AWS::StackName" }," -r ChefServerInstance --region ",{"Ref": "AWS::Region"},"\n" ]
+                                    ]
+                                },
+								"/usr/local/ec2/ec2-hostname.sh",
+								"cd /tmp",
+								{"Fn::Join": [ "", [ "wget -O chef-server.deb ", {"Fn::FindInMap": ["Settings", "Chef", "DownloadUrl"]}]]},
+
+								"dpkg -i chef-server.deb 2>&1 >> /var/log/install_chef_server",
+
+								"sudo chef-server-ctl reconfigure 2>&1 >> /var/log/install_chef_server",
+
+                                "sudo ln -s /opt/chef-server/bin/chef-server-ctl /etc/init.d/chef-server"
+
+                            ]
+                        ]
+                    }
+                },
+                "Tenancy": "default"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Init": {
+                    "config": {
+                        "packages": {
+                            "apt": {
+                                "build-essential": [],
+                                "binutils-doc": [],
+                                "libmysqlclient-dev": [],
+                                "s3cmd": []
+                            }
+                        },
+                        "sources": {
+                        },
+                        "files": {
+                            "/usr/local/ec2/ec2-hostname.sh": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "\n",
+                                        [
+											"#!/bin/bash",
+		                                    {"Fn::Join": ["",["DOMAIN=",{"Ref": "DomainName"}]]},
+											{"Fn::Join": ["",["HOSTNAME=",{"Ref": "ARecord"}]]},
+											{"Fn::Join": ["",["IPV4=",{"Ref": "ChefServerEIP"}]]},
+											"# Set the host name",
+											"hostname $HOSTNAME",
+											"echo $HOSTNAME > /etc/hostname",
+											"# Add fqdn to hosts file",
+											"cat<<EOF > /etc/hosts",
+											"# This file is automatically genreated by ec2-hostname script",
+											"127.0.0.1 localhost",
+											"$IPV4 $HOSTNAME.$DOMAIN $HOSTNAME",
+											"# The following lines are desirable for IPv6 capable hosts",
+											"::1 ip6-localhost ip6-loopback",
+											"fe00::0 ip6-localnet",
+											"ff00::0 ip6-mcastprefix",
+											"ff02::1 ip6-allnodes",
+											"ff02::2 ip6-allrouters",
+											"ff02::3 ip6-allhosts",
+											"EOF"
+										]
+                                    ]
+                                },
+                                "mode": "000700",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/root/cfn/cfn-hup.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "\n",
+                                        [
+                                            "[main]",
+                                            { "Fn::Join" : ["", ["stack=", {"Ref" : "AWS::StackId"}]] },
+                                            { "Fn::Join" : ["", ["region=", {"Ref" : "AWS::Region"}]] }
+                                        ]
+                                    ]
+                                },
+                                "mode": "000600",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/root/cfn/hooks.d/cfn-auto-reloader.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "[cfn-auto-reloader-hook]\n",
+                                            "triggers=post.update\n",
+                                            "path=Resources.ChefServerInstance.Metadata.AWS::CloudFormation::Init\n",
+                                            "action=cfn-init.exe -v -s ", {"Ref" : "AWS::StackId"}, " -r ChefServerInstance --region ", {"Ref" : "AWS::Region"}, "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000600",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "commands": {
+                            "1-install-cfn-hup-daemon": {
+                                "command": "#cfn-hup -c /root/cfn -v >> /var/log/cfn-hup.log",
+                                "ignoreErrors": "true",
+                                "waitAfterCompletion": "0"
+                            },
+                            "2-add-to-rc.local": {
+                                "command": "sed -i '/exit 0/i /usr/local/ec2/ec2-hostname.sh' /etc/rc.local",
+                                "ignoreErrors": "true",
+                                "waitAfterCompletion": "0"
+                            }
+                        },
+                        "services": {
+                            "chef-server" : {
+                                "enabled" : "true",
+                                "ensureRunning" : "true"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ChefDNSRecord": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Condition": "HasDomainName",
+            "Properties": {
+                "HostedZoneName": {
+					"Fn::Join": [
+						"",
+						[
+							{"Ref": "DomainName"},
+							"."
+						]
+					]
+				},
+                "Comment": "Zone apex alias targeted to Chef Server Instance.",
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    { "Ref":"ARecord"},
+									".",
+									{"Ref": "DomainName"},
+                                    "."
+                                ]
+                            ]
+                        },
+                        "Type": "A",
+                        "TTL": "60",
+                        "ResourceRecords": [{"Ref": "ChefServerEIP"}]
+                    }
+                ]
+            }
+        },
+        "ChefStatusAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmDescription": "Checks status of Chef Server instance",
+                "MetricName": "StatusCheckFailed",
+                "Namespace": "AWS/EC2",
+                "Statistic": "Maximum",
+                "Period": "60",
+                "EvaluationPeriods": "2",
+                "Threshold": "1",
+                "AlarmActions": [
+                    {
+                        "Ref": "NotificationTopic"
+                    }
+                ],
+                "InsufficientDataActions": [
+                    {
+                        "Ref": "NotificationTopic"
+                    }
+                ],
+                "Dimensions": [
+                    {
+                        "Name": "InstanceId",
+                        "Value": {
+                            "Ref": "ChefServerInstance"
+                        }
+                    }
+                ],
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold"
+            }
+        }
+    },
+    "Outputs": {
+		"ChefServerURL" : {
+			"Description" : "URL of chef server WebUI and API access",
+			"Value" : {"Fn::If": [
+                "HasDomainName", 
+                { "Fn::Join" : ["", ["https://", {"Ref": "ARecord"}, ".", {"Ref": "DomainName"}]]},
+                { "Ref": "ChefServerEIP" }
+                ]
+            }
+		}
+    }
+}
