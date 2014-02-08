@@ -1,0 +1,25 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+current_dir = File.dirname(__FILE__)
+
+Vagrant.configure("2") do |config|
+   config.vm.box = "precisevm"
+
+   config.omnibus.chef_version = :latest
+
+   config.berkshelf.enabled = false
+
+   config.vm.provision :chef_client do |chef|
+      chef.chef_server_url = "https://chef.4synergy.nl"
+
+      chef.validation_key_path = "#{current_dir}/.chef/chef-validator.pem"
+      chef.validation_client_name = "chef-validator"
+
+      chef.environment = "development"
+
+      # do cleanup
+      chef.delete_node = true
+      chef.delete_client = true
+   end
+end
