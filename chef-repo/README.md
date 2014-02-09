@@ -85,6 +85,22 @@ $ knife cookbook upload mycookbook
 
 ### Bootstrap your EC2 Node ###
 
+* Create an S3 Bucket. Make sure you use Region 'Ireland' (```eu-west-1```).
+
+If you get a message like this:
+
+```bash
+The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.
+```
+
+... use a unique name. Best practice is to use a reverse domain name convention. 
+
+* Upload ```.chef/chef-validator.pem``` to your S3 Bucket. 
+
+* Make a copy of ```cfn-simple.json``` and name it ```cfn-simple-bootstrap.json``` 
+
+* Add the following ```Metadata``` snippet to the ```MyEc2Instance``` instance.
+
 ```json
 "Metadata": {
   "AWS::CloudFormation::Init": {
@@ -117,7 +133,7 @@ $ knife cookbook upload mycookbook
                   "S3Bucket"
                 ]
               },
-              "/input.zip"
+              "/chef-validator.pem"
             ]
           ]
         }
@@ -129,7 +145,7 @@ $ knife cookbook upload mycookbook
               "\n",
               [
                 "log_location             STDOUT",
-                "validation_client_name   'com_foobar-validator'",
+                "validation_client_name   'chef-validator'",
                 {
                   "Fn::Join": [
                     "",
@@ -229,6 +245,8 @@ $ knife cookbook upload mycookbook
     }
   }
 ```
+
+For more info on Metadata and User Data see [here](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-init.html).
 
 EXTRA: Using Vagrant
 

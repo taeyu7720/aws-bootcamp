@@ -36,8 +36,11 @@
     },
     "ServerRole": {
       "Description": "Role of node (Must exist as Chef role)",
-      "Type": "String",
-      "Default": "webserver"
+      "Type": "String"
+    },
+    "S3Bucket": {
+      "Description": "Your S3 Bucket",
+      "Type": "String"
     }
   },
   "Mappings": {
@@ -99,9 +102,6 @@
       }
     },
     "Settings": {
-      "AWS": {
-        "S3Bucket": "com.foobar-it.chef"
-      },
       "Chef": {
         "ChefServerURL": "https://chef.4synergy.nl"
       }
@@ -150,11 +150,7 @@
                   [
                     "arn:aws:s3:::",
                     {
-                      "Fn::FindInMap": [
-                        "Settings",
-                        "AWS",
-                        "S3Bucket"
-                      ]
+                      "Ref": "S3Bucket"
                     },
                     "/*"
                   ]
@@ -172,11 +168,8 @@
           ]
         },
         "Bucket": {
-          "Fn::FindInMap": [
-            "Settings",
-            "AWS",
+          "Ref": 
             "S3Bucket"
-          ]
         }
       }
     },
@@ -236,13 +229,9 @@
                   [
                     "https://s3-eu-west-1.amazonaws.com/",
                     {
-                      "Fn::FindInMap": [
-                        "Settings",
-                        "AWS",
-                        "S3Bucket"
-                      ]
+                      "Ref": "S3Bucket"
                     },
-                    "/input.zip"
+                    "/chef-validator.pem"
                   ]
                 ]
               }
@@ -254,7 +243,7 @@
                     "\n",
                     [
                       "log_location             STDOUT",
-                      "validation_client_name   'com_foobar-validator'",
+                      "validation_client_name   'chef-validator'",
                       {
                         "Fn::Join": [
                           "",
@@ -344,11 +333,8 @@
             },
             "buckets": [
               {
-                "Fn::FindInMap": [
-                  "Settings",
-                  "AWS",
+                "Ref": 
                   "S3Bucket"
-                ]
               }
             ]
           }
@@ -406,69 +392,7 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": {
-              "Fn::Join": [
-                "",
-                [
-                  ".",
-                  {
-                    "Ref": "AWS::Region"
-                  },
-                  ".",
-                  {
-                    "Ref": "HostedZone"
-                  },
-                  "."
-                ]
-              ]
-            }
-          }
-        ]
-      }
-    },
-    "MyDNSRecord": {
-      "Type": "AWS::Route53::RecordSet",
-      "DependsOn": "MyEc2Instance",
-      "Properties": {
-        "HostedZoneName": {
-          "Fn::Join": [
-            "",
-            [
-              {
-                "Ref": "HostedZone"
-              },
-              "."
-            ]
-          ]
-        },
-        "Comment": "DNS name for my instance.",
-        "Name": {
-          "Fn::Join": [
-            "",
-            [
-              {
-                "Ref": "MyEc2Instance"
-              },
-              ".",
-              {
-                "Ref": "AWS::Region"
-              },
-              ".",
-              {
-                "Ref": "HostedZone"
-              },
-              "."
-            ]
-          ]
-        },
-        "Type": "A",
-        "TTL": "900",
-        "ResourceRecords": [
-          {
-            "Fn::GetAtt": [
-              "MyEc2Instance",
-              "PublicIp"
-            ]
+            "Value": "My bootstrapped instance"
           }
         ]
       }
@@ -482,12 +406,6 @@
           "MyEc2Instance",
           "PublicIp"
         ]
-      }
-    },
-    "MyDNSRecord": {
-      "Description": "Route53 DNS A-Record",
-      "Value": {
-        "Ref": "MyDNSRecord"
       }
     }
   }
