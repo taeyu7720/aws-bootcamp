@@ -1,54 +1,15 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Scalable web server",
+  "Description": "This CloudFormation template creates a simple EC2 instance.",
   "Parameters": {
     "KeyName": {
-      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances (required)",
-      "Type": "String",
-      "MinLength": "1",
-      "MaxLength": "64",
-      "AllowedPattern": "[-_ a-zA-Z0-9]*",
-      "ConstraintDescription": "can contain only alphanumeric characters, spaces, dashes and underscores."
-    },
-    "VpcId": {
-      "Description": "Id of the Virtual Private Cloud (required).",
-      "Type": "String",
-      "Default": "vpc-76eafa14"
-    },
-    "AvailabilityZonesServers": {
-      "Type": "CommaDelimitedList",
-      "Default": "eu-west-1a",
-      "Description": "Comma seperated list of availability zones in which the servers will be created."
-    },
-    "SubnetIdsELB": {
-      "Description": "Comma-seperate list of Public Subnets in which the ELBs will be created .",
-      "Type": "CommaDelimitedList",
-      "Default": "subnet-d45f64a0"
-    },
-    "SubnetIdsServers": {
-      "Description": "Comma-seperate list of Private Subnets in which the servers instances will be created.",
-      "Type": "CommaDelimitedList",
-      "Default": "subnet-eb5f649f"
-    },
-    "InstanceCountMin": {
-      "Description": "Minimum number of EC2 instances in the auto scaling group.",
-      "Type": "Number",
-      "Default": "1"
-    },
-    "InstanceCountMax": {
-      "Description": "Maximum number of EC2 instances in the auto scaling group.",
-      "Type": "Number",
-      "Default": "2"
-    },
-    "InstanceCountInitial": {
-      "Description": "Desired (initial) number of EC2 instances in the auto scaling group.",
-      "Type": "Number",
-      "Default": "1"
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the web server",
+      "Type": "String"
     },
     "InstanceType": {
-      "Description": "Application Server EC2 instance type (Choose m1.small for activedirectory)",
+      "Description": "EC2 instance type",
       "Type": "String",
-      "Default": "m1.small",
+      "Default": "t1.micro",
       "AllowedValues": [
         "t1.micro",
         "m1.small",
@@ -58,52 +19,88 @@
         "m2.xlarge",
         "m2.2xlarge",
         "m2.4xlarge",
+        "m3.xlarge",
+        "m3.2xlarge",
         "c1.medium",
         "c1.xlarge",
         "cc1.4xlarge",
         "cc2.8xlarge",
         "cg1.4xlarge"
       ],
-      "ConstraintDescription": "must be a valid EC2 instance type."
+      "ConstraintDescription": "Must be a valid EC2 instance type."
     }
   },
-  "Mappings": {},
-  "Resources": {
-    "ElasticLoadBalancer": {
-      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
-      "Properties": {
-        "Listeners": [
-          {
-            "LoadBalancerPort": "80",
-            "InstancePort": "80",
-            "Protocol": "HTTP"
-          }
-        ],
-        "HealthCheck": {
-          "Target": "HTTP:80/",
-          "HealthyThreshold": "3",
-          "UnhealthyThreshold": "5",
-          "Interval": "30",
-          "Timeout": "25"
-        },
-        "SecurityGroups": [
-          {
-            "Ref": "LoadBalancerSecurityGroup"
-          }
-        ],
-        "Subnets": {
-          "Ref": "SubnetIdsELB"
-        }
+  "Mappings": {
+    "AWSInstanceType2Arch": {
+      "t1.micro": {
+        "Arch": "32"
+      },
+      "m1.small": {
+        "Arch": "32"
+      },
+      "m1.medium": {
+        "Arch": "64"
+      },
+      "m1.large": {
+        "Arch": "64"
+      },
+      "m1.xlarge": {
+        "Arch": "64"
+      },
+      "m2.xlarge": {
+        "Arch": "64"
+      },
+      "m2.2xlarge": {
+        "Arch": "64"
+      },
+      "m2.4xlarge": {
+        "Arch": "64"
+      },
+      "c1.medium": {
+        "Arch": "32"
+      },
+      "c1.xlarge": {
+        "Arch": "64"
+      },
+      "cc1.4xlarge": {
+        "Arch": "64"
       }
     },
-    "LoadBalancerSecurityGroup": {
+    "AWSRegionArch2AMI": {
+      "us-east-1": {
+        "32": "ami-d7a18dbe",
+        "64": "ami-bba18dd2"
+      },
+      "us-west-1": {
+        "32": "ami-923909d7",
+        "64": "ami-a43909e1"
+      },
+      "eu-west-1": {
+        "32": "ami-6a56b81d",
+        "64": "ami-5256b825"
+      },
+      "ap-southeast-1": {
+        "32": "ami-b6baeee4",
+        "64": "ami-b4baeee6"
+      },
+      "ap-northeast-1": {
+        "32": "ami-0b13700a",
+        "64": "ami-0d13700c"
+      }
+    }
+  },
+  "Resources": {
+    "Ec2SecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Enable HTTP access on port 80",
-        "VpcId": {
-          "Ref": "VpcId"
-        },
+        "GroupDescription": "HTTP and SSH access",
         "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          },
           {
             "IpProtocol": "tcp",
             "FromPort": "80",
@@ -113,157 +110,55 @@
         ]
       }
     },
-    "ServerSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
+    "MyEc2Instance": {
+      "Type": "AWS::EC2::Instance",
       "Properties": {
-        "GroupDescription": "Server specific inbound rules.",
-        "SecurityGroupIngress": [
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "22",
-            "ToPort": "22",
-            "CidrIp": "10.0.0.0/16"
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "80",
-            "ToPort": "80",
-            "CidrIp": "10.0.0.0/16"
-          }
-        ],
-        "VpcId": {
-          "Ref": "VpcId"
-        }
-      }
-    },
-    "LaunchConfig": {
-      "Type": "AWS::AutoScaling::LaunchConfiguration",
-      "Properties": {
-        "ImageId": "ami-aebe54d9",
+        "ImageId": {
+          "Fn::FindInMap": [
+            "AWSRegionArch2AMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            {
+              "Fn::FindInMap": [
+                "AWSInstanceType2Arch",
+                {
+                  "Ref": "InstanceType"
+                },
+                "Arch"
+              ]
+            }
+          ]
+        },
         "KeyName": {
           "Ref": "KeyName"
         },
-        "SecurityGroups": [
-          {
-            "Ref": "ServerSecurityGroup"
-          }
-        ],
         "InstanceType": {
           "Ref": "InstanceType"
-        }
-      }
-    },
-    "WebServerGroup": {
-      "Type": "AWS::AutoScaling::AutoScalingGroup",
-      "Properties": {
-        "AvailabilityZones": {
-          "Ref": "AvailabilityZonesServers"
         },
-        "VPCZoneIdentifier": {
-          "Ref": "SubnetIdsServers"
-        },
-        "LaunchConfigurationName": {
-          "Ref": "LaunchConfig"
-        },
-        "MinSize": {
-          "Ref": "InstanceCountMin"
-        },
-        "MaxSize": {
-          "Ref": "InstanceCountMax"
-        },
-        "DesiredCapacity": {
-          "Ref": "InstanceCountInitial"
-        },
-        "HealthCheckGracePeriod": "600",
-        "HealthCheckType": "ELB",
-        "LoadBalancerNames": [
+        "SecurityGroups": [
           {
-            "Ref": "ElasticLoadBalancer"
+            "Ref": "Ec2SecurityGroup"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "My First CFN Ec2 Instance"
           }
         ]
-      }
-    },
-    "WebServerScaleUpPolicy": {
-      "Type": "AWS::AutoScaling::ScalingPolicy",
-      "Properties": {
-        "AdjustmentType": "ChangeInCapacity",
-        "AutoScalingGroupName": {
-          "Ref": "WebServerGroup"
-        },
-        "Cooldown": "300",
-        "ScalingAdjustment": "1"
-      }
-    },
-    "WebServerScaleDownPolicy": {
-      "Type": "AWS::AutoScaling::ScalingPolicy",
-      "Properties": {
-        "AdjustmentType": "ChangeInCapacity",
-        "AutoScalingGroupName": {
-          "Ref": "WebServerGroup"
-        },
-        "Cooldown": "300",
-        "ScalingAdjustment": "-1"
-      }
-    },
-    "CPUAlarmHigh": {
-      "Type": "AWS::CloudWatch::Alarm",
-      "Properties": {
-        "AlarmDescription": "Scale-up if CPU > 80% for 10 minutes",
-        "MetricName": "CPUUtilization",
-        "Namespace": "AWS/EC2",
-        "Statistic": "Average",
-        "Period": "300",
-        "EvaluationPeriods": "2",
-        "Threshold": "75",
-        "AlarmActions": [
-          {
-            "Ref": "WebServerScaleUpPolicy"
-          }
-        ],
-        "Dimensions": [
-          {
-            "Name": "AutoScalingGroupName",
-            "Value": {
-              "Ref": "WebServerGroup"
-            }
-          }
-        ],
-        "ComparisonOperator": "GreaterThanThreshold"
-      }
-    },
-    "CPUAlarmLow": {
-      "Type": "AWS::CloudWatch::Alarm",
-      "Properties": {
-        "AlarmDescription": "Scale-down if CPU < 50% for 10 minutes",
-        "MetricName": "CPUUtilization",
-        "Namespace": "AWS/EC2",
-        "Statistic": "Average",
-        "Period": "300",
-        "EvaluationPeriods": "2",
-        "Threshold": "30",
-        "AlarmActions": [
-          {
-            "Ref": "WebServerScaleDownPolicy"
-          }
-        ],
-        "Dimensions": [
-          {
-            "Name": "AutoScalingGroupName",
-            "Value": {
-              "Ref": "WebServerGroup"
-            }
-          }
-        ],
-        "ComparisonOperator": "LessThanThreshold"
       }
     }
   },
   "Outputs": {
-    "DNSName": {
-      "Fn::GetAtt": [
-        "LoadBalancerSecurityGroup",
-        "DNSName"
-      ]
+    "PublicIP": {
+      "Description": "Public IP address of the newly created EC2 instance",
+      "Value": {
+        "Fn::GetAtt": [
+          "MyEc2Instance",
+          "PublicIp"
+        ]
+      }
     }
   }
 }
