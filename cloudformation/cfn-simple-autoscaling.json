@@ -261,7 +261,8 @@
           "ElasticLoadBalancer",
           "DNSName"
         ]
-      }
+      },
+      "Description" : "Copy this URL to your browser."
     }
   }
 }

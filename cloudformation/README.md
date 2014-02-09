@@ -9,6 +9,7 @@ CLOUDFORMATION
  - [Update the Stack](#update-the-stack)
  - [Delete the Stack](#delete-the-stack)
 - [Exercise 2: Auto Scaling + Load Balancer](#exercise-2-auto-scaling--load-balancer)
+- [More CloudFormation Templates](#more-cloudformation-templates)
 
 #Exercise 1: My First CloudFormation Stack#
 
@@ -152,7 +153,6 @@ First, study template ```cfn-simple-autoscaling.json```. Notice that this templa
 The following Resources are related to Auto Scaling and the Elastic Load Balancer. 
 
 * ```AWS::ElasticLoadBalancing::LoadBalancer```
-
 * ```AWS::AutoScaling::LaunchConfiguration```
 * ```AWS::AutoScaling::AutoScalingGroup```
 * ```AWS::AutoScaling::ScalingPolicy```
@@ -178,3 +178,11 @@ After the Stack has been created, there should be an Output called ```LoadBalanc
 
 - - - 
 
+## More CloudFormation Templates ##
+
+If you have some time left, have a look at [these](http://aws.amazon.com/cloudformation/aws-cloudformation-templates/) templates.
+
+As a reference, I've included some more CloudFormation templates:
+
+* ```chef-server.json``` - This template is used to create a fully-functional Chef Server instance.
+* ```cfn-jenkins.json``` - This template can be used to create a fully-functional Jenkins CI instance.
