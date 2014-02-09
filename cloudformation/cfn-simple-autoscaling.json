@@ -11,24 +11,21 @@
       "ConstraintDescription": "can contain only alphanumeric characters, spaces, dashes and underscores."
     },
     "VpcId": {
-      "Description": "Id of the Virtual Private Cloud (required).",
-      "Type": "String",
-      "Default": "vpc-76eafa14"
+      "Description": "Id of your (Default) Virtual Private Cloud (required).",
+      "Type": "String"
     },
     "AvailabilityZonesServers": {
       "Type": "CommaDelimitedList",
       "Default": "eu-west-1a",
       "Description": "Comma seperated list of availability zones in which the servers will be created."
     },
-    "SubnetIdsELB": {
+    "PublicSubnetVPC": {
       "Description": "Comma-seperate list of Public Subnets in which the ELBs will be created .",
-      "Type": "CommaDelimitedList",
-      "Default": "subnet-d45f64a0"
+      "Type": "CommaDelimitedList"
     },
-    "SubnetIdsServers": {
+    "PrivateSubnetVPC": {
       "Description": "Comma-seperate list of Private Subnets in which the servers instances will be created.",
-      "Type": "CommaDelimitedList",
-      "Default": "subnet-eb5f649f"
+      "Type": "CommaDelimitedList"
     },
     "InstanceCountMin": {
       "Description": "Minimum number of EC2 instances in the auto scaling group.",
@@ -46,9 +43,9 @@
       "Default": "1"
     },
     "InstanceType": {
-      "Description": "Application Server EC2 instance type (Choose m1.small for activedirectory)",
+      "Description": "Application Server EC2 instance type (Choose t1.micro for Free Tier)",
       "Type": "String",
-      "Default": "m1.small",
+      "Default": "t1.micro",
       "AllowedValues": [
         "t1.micro",
         "m1.small",
@@ -67,7 +64,6 @@
       "ConstraintDescription": "must be a valid EC2 instance type."
     }
   },
-  "Mappings": {},
   "Resources": {
     "ElasticLoadBalancer": {
       "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
@@ -92,7 +88,7 @@
           }
         ],
         "Subnets": {
-          "Ref": "SubnetIdsELB"
+          "Ref": "PublicSubnetVPC"
         }
       }
     },
@@ -160,7 +156,7 @@
           "Ref": "AvailabilityZonesServers"
         },
         "VPCZoneIdentifier": {
-          "Ref": "SubnetIdsServers"
+          "Ref": "PrivateSubnetVPC"
         },
         "LaunchConfigurationName": {
           "Ref": "LaunchConfig"
@@ -259,11 +255,13 @@
     }
   },
   "Outputs": {
-    "DNSName": {
-      "Fn::GetAtt": [
-        "LoadBalancerSecurityGroup",
-        "DNSName"
-      ]
+    "LoadBalancerEndpoint": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ElasticLoadBalancer",
+          "DNSName"
+        ]
+      }
     }
   }
 }

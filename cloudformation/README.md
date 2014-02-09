@@ -10,11 +10,11 @@ CLOUDFORMATION
  - [Delete the Stack](#delete-the-stack)
 - [Exercise 2: Auto Scaling + Load Balancer](#exercise-2-auto-scaling--load-balancer)
 
-##Exercise 1: My First CloudFormation Stack##
+#Exercise 1: My First CloudFormation Stack#
 
-###Create the Stack###
+## Create the Stack ##
 
-####Log in####
+### Log in ###
 * Login into the AWS Dashboard https://console.aws.amazon.com and go to CloudFormation.
 
 ![AWS Dashboard](https://raw.github.com/paprins/aws-bootcamp/master/cloudformation/img/aws-dashboard.png)
@@ -23,7 +23,18 @@ CLOUDFORMATION
 
  ![eu-west-1](https://raw.github.com/paprins/aws-bootcamp/master/cloudformation/img/aws-region.png)
 
-####Create a New Stack####
+Before we are going to create a Stack, look at template ```cfn-simple.json``` and try to understand the different elements. For example, lookup ```AWS::EC2::Instance``` in the documentation (see links below) and see what you can configure.
+
+### Reference ###
+If you need any help when working with CloudFormation, the following links should help you out.
+
+* [Introduction](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/CHAP_Intro.html)
+* [Getting Started](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/GettingStarted.html)
+* [Using the AWS Command Line Interface](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-using-cli.html)
+* [Template Reference](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-reference.html)
+* [AWS Resource Types Reference](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html)
+
+### Create a New Stack ###
 Push the "Create Stack" button, enter a sensible name for your Stack and upload the ```cfn-simple.json``` template (see figure).
 
 ![Create a New Stack](https://raw.github.com/paprins/aws-bootcamp/master/cloudformation/img/aws-cfn-create-stack-1.png)
@@ -45,7 +56,7 @@ After setting up a Builder for CloudFormation, all you have to do is press ```Co
 
 Press *Next Step*
 
-####Specify Parameters####
+### Specify Parameters ###
 
 This step will show a form in wich you enter the values for the Parameters you specified in your template (see figure).
 
@@ -55,7 +66,7 @@ This step will show a form in wich you enter the values for the Parameters you s
 
 Press *Next Step*
 
-####Add Tags####
+### Add Tags ###
 
 This step allows you to add Tags to your Stack. This can be handy for billing purposes or to identify which Stacks/Resources have been created for a specific department/customer/developer/...
 
@@ -63,7 +74,7 @@ This step allows you to add Tags to your Stack. This can be handy for billing pu
 
 Press *Next Step*
 
-####Review####
+### Review ###
 
 ![eu-west-1](https://raw.github.com/paprins/aws-bootcamp/master/cloudformation/img/aws-cfn-create-stack-4.png)
 
@@ -73,7 +84,17 @@ After you pressed the *Create* button, the CloudFormation framework starts creat
 
 ![eu-west-1](https://raw.github.com/paprins/aws-bootcamp/master/cloudformation/img/aws-cfn-create-stack-5.png)
 
-####Testing Access####
+If you would like to use the Command Line instead of the Dashboard, use this command:
+
+```bash
+$ aws cloudformation create-stack 
+  --region eu-west-1 
+  --stack-name my-first-cfn-stack 
+  --template-body file://cfn-simple.json 
+  --parameters ParameterKey=KeyName,ParameterValue=workshop ParameterKey=InstanceType,ParameterValue=t1.micro
+```
+
+### Testing Access ###
 
 Since we added a Security Group that includes Inbound access on port 22 (SSH), let's test if we can access the instance.
 
@@ -104,7 +125,7 @@ If you use Windows to access the Linux-based instance, you first have to convert
 
 Follow [this guide](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/putty.html) and you should be good to go in no time.
 
-###Update the Stack###
+## Update the Stack ##
 Let's update our template and update the Stack we just created.
 
 * Open the ```cfn-simple.json``` template in an editor.
@@ -117,12 +138,43 @@ Let's update our template and update the Stack we just created.
 
 This is a fairly trivial update, but (in theory) you can update any resource created in the Stack. Depending on the type of Resource and its dependencies, the resource will be updated without interruption, or they will be replaced. See [here](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks.html) for more information about Updating Stacks.
 
-###Delete the Stack###
+## Delete the Stack ##
 If you would like to delete an entire stack of resources, just select the Stack from the Dashboard and press **Delete Stack**.
 
 - - -
 
-##Exercise 2: Auto Scaling + Load Balancer##
+#Exercise 2: Auto Scaling + Load Balancer#
 
+In exercise 1, we've created a very simple stack. Now, let's create a Stack that contains everything we created this morning. 
 
+First, study template ```cfn-simple-autoscaling.json```. Notice that this template contains more Resources.
+
+The following Resources are related to Auto Scaling and the Elastic Load Balancer. 
+
+* ```AWS::ElasticLoadBalancing::LoadBalancer```
+
+* ```AWS::AutoScaling::LaunchConfiguration```
+* ```AWS::AutoScaling::AutoScalingGroup```
+* ```AWS::AutoScaling::ScalingPolicy```
+* ```AWS::CloudWatch::Alarm```
+
+If you would like to know more about these resources, look them up in the CloudFormation documentation.
+
+Execute the same steps as you've done in exercise 1:
+
+1. Create new Stack
+2. Enter Parameters
+3. Create Stack
+
+But, before you create this Stack. Make a note of the following:
+
+* Goto: the [VPC](https://console.aws.amazon.com/vpc/) dashboard 
+* Write down the following (you'll need them when specifying the Parameters):
+ * VPC Id.
+ * Public Subnet Id
+ * Private Subnet Id
+
+After the Stack has been created, there should be an Output called ```LoadBalancerEndpoint```. Copy this to your browser to access the application.
+
+- - - 
 
