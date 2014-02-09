@@ -3,6 +3,7 @@
 - [Repository Directories](#repository-directories)
 - [Before you begin](#before-you-begin)
 - [Exercise 1: Workstation Setup](#exercise-1-workstation-setup)
+- [Exercise 2: My First Chef](#exercise-2-my-first-chef)
 
 ## Overview ##
 ===
@@ -30,10 +31,10 @@ Make sure you've downloaded this Git repository to your machine. Just click [thi
 
 * Goto: http://www.getchef.com/chef/install/
  * Select your OS (and version and architecture)
-* Download most recent version (currently: 11.10.0-1) and follow installation instructions.
+* Download most recent version (currently: 11.10.0-1) 
+* Follow installation instructions.
 
-Quick Links
----
+### Quick Download Links ###
 * [Windows](https://opscode-omnibus-packages.s3.amazonaws.com/windows/2008r2/x86_64/chef-client-11.10.0-1.windows.msi)
 * [OSX](https://opscode-omnibus-packages.s3.amazonaws.com/mac_os_x/10.7/x86_64/chef-11.10.0_1.mac_os_x.10.7.2.sh)
 * [Ubuntu 12.04](https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/chef_11.10.0-1.ubuntu.12.04_amd64.deb)
@@ -44,24 +45,196 @@ For Linux/OSX you can use this command line to download and install Chef:
 $ curl -L https://www.opscode.com/chef/install.sh | sudo bash
 ```
 
-Exercise 1: Create a Role
+### Test your installation ###
+
+You can test if your installation is ok by following these steps:
+* Open a Command Prompt or Shell and go to the ```chef-repo``` directory. (Remember: all Chef commands are executed from the so-called kitchen)
+* Type: ```knife client list```
+
+It should display something like this:
+
+```bash
+chef-validator
+chef-webui
+workshop
+```
+
+## Exercise 2: My First Chef ##
+
+You've seen the presentation. So, you know about Roles, Cookbooks, Recipes, and what not. Let's create some ourselves. The ultimate goal would be that we create an instance (same ) and provision it using Chef
+
+### Create a Role ###
 
 Make sure you
 
 ```bash
-knife role create <your_id>
+$ knife role create <your_id>
 ```
 
-Exercice 2: Create a Cookbook
+### Create a Cookbook ####
 
 ```bash
-knife cookbook create mycookbook
+$ knife cookbook create mycookbook
 ```
 
-Exercise 3: Create a Recipe
+### Create a Recipe ###
 
-Exercise 4; Bootstrap your EC2 Node
+```bash
+$ knife cookbook upload mycookbook
+```
+
+### Bootstrap your EC2 Node ###
+
+```json
+"Metadata": {
+  "AWS::CloudFormation::Init": {
+    "config": {
+      "packages": {
+        "yum": {
+          "ruby": [],
+          "rubygems": [],
+          "ruby-devel": [],
+          "make": [],
+          "glibc-devel": [],
+          "gcc": [],
+          "python-setuptools": []
+        },
+        "rubygems": {
+          "chef": [],
+          "ohai": []
+        }
+      },
+      "sources": {
+        "/etc/chef/": {
+          "Fn::Join": [
+            "",
+            [
+              "https://s3-eu-west-1.amazonaws.com/",
+              {
+                "Fn::FindInMap": [
+                  "Settings",
+                  "AWS",
+                  "S3Bucket"
+                ]
+              },
+              "/input.zip"
+            ]
+          ]
+        }
+      },
+      "files": {
+        "/etc/chef/client.rb": {
+          "content": {
+            "Fn::Join": [
+              "\n",
+              [
+                "log_location             STDOUT",
+                "validation_client_name   'com_foobar-validator'",
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "environment '",
+                      {
+                        "Ref": "ChefEnvironment"
+                      },
+                      "'"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "chef_server_url '",
+                      {
+                        "Fn::FindInMap": [
+                          "Settings",
+                          "Chef",
+                          "ChefServerURL"
+                        ]
+                      },
+                      "'"
+                    ]
+                  ]
+                }
+              ]
+            ]
+          },
+          "mode": "000644",
+          "owner": "root",
+          "group": "root"
+        },
+        "/etc/chef/first-boot.json": {
+          "content": {
+            "run_list": [
+              {
+                "Fn::Join": [
+                  "",
+                  [
+                    "role[",
+                    {
+                      "Ref": "ServerRole"
+                    },
+                    "]"
+                  ]
+                ]
+              }
+            ]
+          },
+          "mode": "000644",
+          "owner": "root",
+          "group": "root"
+        }
+      },
+      "commands": {
+        "01ChefClientRun": {
+          "command": {
+            "Fn::Join": [
+              "",
+              [
+                "/usr/bin/chef-client -j /etc/chef/first-boot.json -E ",
+                {
+                  "Ref": "ChefEnvironment"
+                },
+                " --logfile /etc/chef/first-boot.log"
+              ]
+            ]
+          }
+        }
+      }
+    }
+  },
+  "AWS::CloudFormation::Authentication": {
+    "S3AccessCreds": {
+      "type": "S3",
+      "accessKeyId": {
+        "Ref": "HostKeys"
+      },
+      "secretKey": {
+        "Fn::GetAtt": [
+          "HostKeys",
+          "SecretAccessKey"
+        ]
+      },
+      "buckets": [
+        {
+          "Fn::FindInMap": [
+            "Settings",
+            "AWS",
+            "S3Bucket"
+          ]
+        }
+      ]
+    }
+  }
+```
 
 EXTRA: Using Vagrant
 
+* Download (and install) Vagrant from [here](http://www.vagrantup.com/downloads.html)
+* Install the following Vagrant plugins, by typing:
+ * ```vagrant plugin install vagrant-aws```
+ * ```vagrant plugin install vagrant-omnibus```
+* Verify installation of plugins by typing: ```vagrant plugin list```
 
