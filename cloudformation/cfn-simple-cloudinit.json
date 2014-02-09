@@ -1,0 +1,494 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "This CloudFormation template creates a simple bootstrapped EC2 instance.",
+  "Parameters": {
+    "KeyName": {
+      "Type": "String",
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the web server"
+    },
+    "InstanceType": {
+      "Description": "EC2 instance type",
+      "Type": "String",
+      "Default": "t1.micro",
+      "AllowedValues": [
+        "t1.micro",
+        "m1.small",
+        "m1.medium",
+        "m1.large",
+        "m1.xlarge",
+        "m2.xlarge",
+        "m2.2xlarge",
+        "m2.4xlarge",
+        "m3.xlarge",
+        "m3.2xlarge",
+        "c1.medium",
+        "c1.xlarge",
+        "cc1.4xlarge",
+        "cc2.8xlarge",
+        "cg1.4xlarge"
+      ],
+      "ConstraintDescription": "must be a valid EC2 instance type."
+    },
+    "ChefEnvironment": {
+      "Description": "Reference to Chef environment from which node will be provisioned",
+      "Type": "String",
+      "Default": "development"
+    },
+    "ServerRole": {
+      "Description": "Role of node (Must exist as Chef role)",
+      "Type": "String",
+      "Default": "webserver"
+    }
+  },
+  "Mappings": {
+    "AWSInstanceType2Arch": {
+      "t1.micro": {
+        "Arch": "32"
+      },
+      "m1.small": {
+        "Arch": "32"
+      },
+      "m1.medium": {
+        "Arch": "64"
+      },
+      "m1.large": {
+        "Arch": "64"
+      },
+      "m1.xlarge": {
+        "Arch": "64"
+      },
+      "m2.xlarge": {
+        "Arch": "64"
+      },
+      "m2.2xlarge": {
+        "Arch": "64"
+      },
+      "m2.4xlarge": {
+        "Arch": "64"
+      },
+      "c1.medium": {
+        "Arch": "32"
+      },
+      "c1.xlarge": {
+        "Arch": "64"
+      },
+      "cc1.4xlarge": {
+        "Arch": "64"
+      }
+    },
+    "AWSRegionArch2AMI": {
+      "us-east-1": {
+        "32": "ami-d7a18dbe",
+        "64": "ami-bba18dd2"
+      },
+      "us-west-1": {
+        "32": "ami-923909d7",
+        "64": "ami-a43909e1"
+      },
+      "eu-west-1": {
+        "32": "ami-6a56b81d",
+        "64": "ami-5256b825"
+      },
+      "ap-southeast-1": {
+        "32": "ami-b6baeee4",
+        "64": "ami-b4baeee6"
+      },
+      "ap-northeast-1": {
+        "32": "ami-0b13700a",
+        "64": "ami-0d13700c"
+      }
+    },
+    "Settings": {
+      "AWS": {
+        "S3Bucket": "com.foobar-it.chef"
+      },
+      "Chef": {
+        "ChefServerURL": "https://chef.4synergy.nl"
+      }
+    }
+  },
+  "Resources": {
+    "ChefClientUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "root",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudformation:DescribeStackResource",
+                    "s3:GetObject"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "PolicyDocument": {
+          "Version": "2008-10-17",
+          "Id": "MyPolicy",
+          "Statement": [
+            {
+              "Sid": "ReadAccess",
+              "Action": [
+                "s3:GetObject"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Fn::FindInMap": [
+                        "Settings",
+                        "AWS",
+                        "S3Bucket"
+                      ]
+                    },
+                    "/*"
+                  ]
+                ]
+              },
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "ChefClientUser",
+                    "Arn"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "Bucket": {
+          "Fn::FindInMap": [
+            "Settings",
+            "AWS",
+            "S3Bucket"
+          ]
+        }
+      }
+    },
+    "HostKeys": {
+      "Type": "AWS::IAM::AccessKey",
+      "DependsOn": "ChefClientUser",
+      "Properties": {
+        "UserName": {
+          "Ref": "ChefClientUser"
+        }
+      }
+    },
+    "Ec2SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "HTTP and SSH access",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "MyEc2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Metadata": {
+        "AWS::CloudFormation::Init": {
+          "config": {
+            "packages": {
+              "yum": {
+                "ruby": [],
+                "rubygems": [],
+                "ruby-devel": [],
+                "make": [],
+                "glibc-devel": [],
+                "gcc": [],
+                "python-setuptools": []
+              },
+              "rubygems": {
+                "chef": [],
+                "ohai": []
+              }
+            },
+            "sources": {
+              "/etc/chef/": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "https://s3-eu-west-1.amazonaws.com/",
+                    {
+                      "Fn::FindInMap": [
+                        "Settings",
+                        "AWS",
+                        "S3Bucket"
+                      ]
+                    },
+                    "/input.zip"
+                  ]
+                ]
+              }
+            },
+            "files": {
+              "/etc/chef/client.rb": {
+                "content": {
+                  "Fn::Join": [
+                    "\n",
+                    [
+                      "log_location             STDOUT",
+                      "validation_client_name   'com_foobar-validator'",
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "environment '",
+                            {
+                              "Ref": "ChefEnvironment"
+                            },
+                            "'"
+                          ]
+                        ]
+                      },
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "chef_server_url '",
+                            {
+                              "Fn::FindInMap": [
+                                "Settings",
+                                "Chef",
+                                "ChefServerURL"
+                              ]
+                            },
+                            "'"
+                          ]
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                "mode": "000644",
+                "owner": "root",
+                "group": "root"
+              },
+              "/etc/chef/first-boot.json": {
+                "content": {
+                  "run_list": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "role[",
+                          {
+                            "Ref": "ServerRole"
+                          },
+                          "]"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                "mode": "000644",
+                "owner": "root",
+                "group": "root"
+              }
+            },
+            "commands": {
+              "01ChefClientRun": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "/usr/bin/chef-client -j /etc/chef/first-boot.json -E ",
+                      {
+                        "Ref": "ChefEnvironment"
+                      },
+                      " --logfile /etc/chef/first-boot.log"
+                    ]
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "AWS::CloudFormation::Authentication": {
+          "S3AccessCreds": {
+            "type": "S3",
+            "accessKeyId": {
+              "Ref": "HostKeys"
+            },
+            "secretKey": {
+              "Fn::GetAtt": [
+                "HostKeys",
+                "SecretAccessKey"
+              ]
+            },
+            "buckets": [
+              {
+                "Fn::FindInMap": [
+                  "Settings",
+                  "AWS",
+                  "S3Bucket"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "Properties": {
+        "ImageId": {
+          "Fn::FindInMap": [
+            "AWSRegionArch2AMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            {
+              "Fn::FindInMap": [
+                "AWSInstanceType2Arch",
+                {
+                  "Ref": "InstanceType"
+                },
+                "Arch"
+              ]
+            }
+          ]
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "Ec2SecurityGroup"
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -v\n",
+                "# Cloud Init (read/parse/and execute Metadata\n",
+                "/opt/aws/bin/cfn-init --region ",
+                {
+                  "Ref": "AWS::Region"
+                },
+                " -s ",
+                {
+                  "Ref": "AWS::StackId"
+                },
+                " -r MyEc2Instance\n"
+              ]
+            ]
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  ".",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "HostedZone"
+                  },
+                  "."
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "MyDNSRecord": {
+      "Type": "AWS::Route53::RecordSet",
+      "DependsOn": "MyEc2Instance",
+      "Properties": {
+        "HostedZoneName": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "HostedZone"
+              },
+              "."
+            ]
+          ]
+        },
+        "Comment": "DNS name for my instance.",
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "MyEc2Instance"
+              },
+              ".",
+              {
+                "Ref": "AWS::Region"
+              },
+              ".",
+              {
+                "Ref": "HostedZone"
+              },
+              "."
+            ]
+          ]
+        },
+        "Type": "A",
+        "TTL": "900",
+        "ResourceRecords": [
+          {
+            "Fn::GetAtt": [
+              "MyEc2Instance",
+              "PublicIp"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "PublicIP": {
+      "Description": "Public IP address of the newly created EC2 instance",
+      "Value": {
+        "Fn::GetAtt": [
+          "MyEc2Instance",
+          "PublicIp"
+        ]
+      }
+    },
+    "MyDNSRecord": {
+      "Description": "Route53 DNS A-Record",
+      "Value": {
+        "Ref": "MyDNSRecord"
+      }
+    }
+  }
+}
