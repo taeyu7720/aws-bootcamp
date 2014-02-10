@@ -15,14 +15,4 @@ Installing AWS Command Line Interface
 ===
 
 1. Download from [here](http://aws.amazon.com/tools/)
-1. 
-
-
-Vagrant
-===
-
-1. Edit your ```Vagrantfile```
-1. Add the following code block
-
-   chef.node_name = "your_node_name"
-   chef.add_role = "your_role_name"
+1. ...
