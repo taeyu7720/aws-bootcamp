@@ -107,6 +107,9 @@ Please select a different name and try again.
 
 This Git Repository contains a directory called ```chef-repo/.chef```. That directory contains a file called ```chef-validator.pem```. This file is the permissions certificate for communicating with the Chef Server.
 
+![eu-west-1](https://raw.github.com/paprins/aws-bootcamp/master/images/chef-run.png)
+
+
 * Upload ```.chef/chef-validator.pem``` to your S3 Bucket. 
 
 * Make a copy of ```cfn-simple.json``` and name it ```cfn-simple-bootstrap.json``` 
