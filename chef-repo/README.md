@@ -17,9 +17,16 @@ While we prefer Git, and make this repository available via GitHub, you are welc
 ===
 This repository contains several directories, and each directory contains a README file that describes what it is for in greater detail, and how to use it for managing your systems with Chef.
 
+* ```.chef/``` - This directory contains Chef configuration files.
 * ```cookbooks/``` - Cookbooks you download or create.
 * ```data_bags/``` - Store data bags and items  in .json in the repository.
 * ```roles/``` - Store roles in .rb or .json in the repository.
+
+### ```.chef``` ###
+
+* ```chef-validator.pem``` - private key used to authenticate requests to Chef Server.
+* ```knife.rb``` - ```knife``` configuration file ([docs](http://docs.opscode.com/config_rb_knife.html))
+* ```workshop.pem``` - private key for your workstation.
 
 Before you begin
 ===
