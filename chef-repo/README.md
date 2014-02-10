@@ -4,6 +4,7 @@
 - [Before you begin](#before-you-begin)
 - [Exercise 1: Workstation Setup](#exercise-1-workstation-setup)
 - [Exercise 2: My First Chef](#exercise-2-my-first-chef)
+- [[EXTRA] Using Vagrant](#extra-using-vagrant)
 
 ## Overview ##
 ===
@@ -35,11 +36,12 @@ Make sure you've downloaded this Git repository to your machine. Just click [thi
 * Follow installation instructions.
 
 ### Quick Download Links ###
+
 * [Windows](https://opscode-omnibus-packages.s3.amazonaws.com/windows/2008r2/x86_64/chef-client-11.10.0-1.windows.msi)
 * [OSX](https://opscode-omnibus-packages.s3.amazonaws.com/mac_os_x/10.7/x86_64/chef-11.10.0_1.mac_os_x.10.7.2.sh)
 * [Ubuntu 12.04](https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/12.04/x86_64/chef_11.10.0-1.ubuntu.12.04_amd64.deb)
 
-For Linux/OSX you can use this command line to download and install Chef:
+For Linux/OSX you can use the Omnibus installer to download and install Chef:
 
 ```bash
 $ curl -L https://www.opscode.com/chef/install.sh | sudo bash
@@ -48,6 +50,7 @@ $ curl -L https://www.opscode.com/chef/install.sh | sudo bash
 ### Test your installation ###
 
 You can test if your installation is ok by following these steps:
+
 * Open a Command Prompt or Shell and go to the ```chef-repo``` directory. (Remember: all Chef commands are executed from the so-called kitchen)
 * Type: ```knife client list```
 
@@ -61,7 +64,9 @@ workshop
 
 ## Exercise 2: My First Chef ##
 
-You've seen the presentation. So, you know about Roles, Cookbooks, Recipes, and what not. Let's create some ourselves. The ultimate goal would be that we create an instance (same ) and provision it using Chef
+You've seen the presentation. So, you know about Roles, Cookbooks, Recipes, and what not. Let's create some ourselves. The ultimate goal would be that we create an instance (same) and provision it using Chef. 
+
+> I assume you already cloned this Git repository or [downloaded](https://github.com/paprins/aws-bootcamp/archive/master.zip) it as as ZIP file. If you haven't, do so now.
 
 ### Create a Role ###
 
@@ -85,15 +90,22 @@ $ knife cookbook upload mycookbook
 
 ### Bootstrap your EC2 Node ###
 
+First, we need an S3 Bucket to store some artifacts needed for provisioning our nodes.
+
+* Goto the AWS Dashboard and select S3.
 * Create an S3 Bucket. Make sure you use Region 'Ireland' (```eu-west-1```).
 
 If you get a message like this:
 
 ```bash
-The requested bucket name is not available. The bucket namespace is shared by all users of the system. Please select a different name and try again.
+The requested bucket name is not available. 
+The bucket namespace is shared by all users of the system. 
+Please select a different name and try again.
 ```
 
-... use a unique name. Best practice is to use a reverse domain name convention. 
+... use a unique name. As the message indicates, the namespace is shares by all users of S3. In short, this means that the S3 Bucket name should be unique accross all Regions. Best practice is to use a reverse domain name convention. 
+
+This Git Repository contains a directory called ```chef-repo/.chef```. That directory contains a file called ```chef-validator.pem```. This file is the permissions certificate for communicating with the Chef Server.
 
 * Upload ```.chef/chef-validator.pem``` to your S3 Bucket. 
 
@@ -124,17 +136,7 @@ The requested bucket name is not available. The bucket namespace is shared by al
         "/etc/chef/": {
           "Fn::Join": [
             "",
-            [
-              "https://s3-eu-west-1.amazonaws.com/",
-              {
-                "Fn::FindInMap": [
-                  "Settings",
-                  "AWS",
-                  "S3Bucket"
-                ]
-              },
-              "/chef-validator.pem"
-            ]
+            [ "https://s3-eu-west-1.amazonaws.com/", {"Ref": "S3Bucket"}, "/chef-validator.pem" ]
           ]
         }
       },
@@ -146,34 +148,8 @@ The requested bucket name is not available. The bucket namespace is shared by al
               [
                 "log_location             STDOUT",
                 "validation_client_name   'chef-validator'",
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "environment '",
-                      {
-                        "Ref": "ChefEnvironment"
-                      },
-                      "'"
-                    ]
-                  ]
-                },
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "chef_server_url '",
-                      {
-                        "Fn::FindInMap": [
-                          "Settings",
-                          "Chef",
-                          "ChefServerURL"
-                        ]
-                      },
-                      "'"
-                    ]
-                  ]
-                }
+                { "Fn::Join": ["",["environment '",{"Ref": "ChefEnvironment"},"'"]] },
+                { "Fn::Join": ["",["chef_server_url '",{"Fn::FindInMap": ["Settings","Chef","ChefServerURL"]},"'"]] }
               ]
             ]
           },
@@ -185,16 +161,7 @@ The requested bucket name is not available. The bucket namespace is shared by al
           "content": {
             "run_list": [
               {
-                "Fn::Join": [
-                  "",
-                  [
-                    "role[",
-                    {
-                      "Ref": "ServerRole"
-                    },
-                    "]"
-                  ]
-                ]
+                "Fn::Join": ["",["role[",{"Ref": "ServerRole"},"]"]]
               }
             ]
           },
@@ -206,14 +173,9 @@ The requested bucket name is not available. The bucket namespace is shared by al
       "commands": {
         "01ChefClientRun": {
           "command": {
-            "Fn::Join": [
-              "",
-              [
-                "/usr/bin/chef-client -j /etc/chef/first-boot.json -E ",
-                {
-                  "Ref": "ChefEnvironment"
-                },
-                " --logfile /etc/chef/first-boot.log"
+            "Fn::Join": [""
+               ,["/usr/bin/chef-client -j /etc/chef/first-boot.json -E ",{"Ref": "ChefEnvironment"}
+               ," --logfile /etc/chef/first-boot.log"
               ]
             ]
           }
@@ -224,31 +186,16 @@ The requested bucket name is not available. The bucket namespace is shared by al
   "AWS::CloudFormation::Authentication": {
     "S3AccessCreds": {
       "type": "S3",
-      "accessKeyId": {
-        "Ref": "HostKeys"
-      },
-      "secretKey": {
-        "Fn::GetAtt": [
-          "HostKeys",
-          "SecretAccessKey"
-        ]
-      },
-      "buckets": [
-        {
-          "Fn::FindInMap": [
-            "Settings",
-            "AWS",
-            "S3Bucket"
-          ]
-        }
-      ]
+      "accessKeyId": {"Ref": "HostKeys"},
+      "secretKey": {"Fn::GetAtt": ["HostKeys","SecretAccessKey"]},
+      "buckets": [ {"Ref": "S3Bucket"} ]
     }
   }
 ```
 
 For more info on Metadata and User Data see [here](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-init.html).
 
-EXTRA: Using Vagrant
+## [EXTRA] Using Vagrant ##
 
 * Download (and install) Vagrant from [here](http://www.vagrantup.com/downloads.html)
 * Install the following Vagrant plugins, by typing:
@@ -256,3 +203,6 @@ EXTRA: Using Vagrant
  * ```vagrant plugin install vagrant-omnibus```
 * Verify installation of plugins by typing: ```vagrant plugin list```
 
+More info about:
+* the ```vagrant-aws``` plugin here: https://github.com/mitchellh/vagrant-aws
+* the ```vagrant-omnibus``` plugin here: https://github.com/schisamo/vagrant-omnibus
