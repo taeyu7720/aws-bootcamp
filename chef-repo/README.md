@@ -101,13 +101,13 @@ Output should be something like this:
 ** Creating specs for cookbook: user_one
 ```
 
-* Edit ```cookbooks/user_one/recipes/default.rb``` and add: ```include_recipe "nginx"```
+* **Edit** ```cookbooks/user_one/recipes/default.rb``` and add: ```include_recipe "nginx"```
 >The ```default.rb``` is called the default recipe (duuuh). This recipe is executed if no other recipe is mentioned when calling a cookbook from a run_list. 
 >We just added a reference to the ```nginx``` cookbook without reference to a specific recipe, so you now know that the *default* recipe will be executed. Curious what that recipe contains? See here: https://github.com/opscode-cookbooks/nginx
 
-* Edit ```cookbooks/user_one/metadata.rb``` and add ```depends "nginx"```
+* **Edit** ```cookbooks/user_one/metadata.rb``` and add ```depends "nginx"```
 
-* Upload Cookbook to Chef Server by typing:
+* **Upload** Cookbook to Chef Server by typing:
 
 ```bash
 $ knife cookbook upload user_one
@@ -136,18 +136,18 @@ ohai              1.1.12
 rsyslog           1.10.2
 runit             1.5.8
 s3_file           2.3.0
-**user_one          0.1.0**
+user_one          0.1.0 <-- LOOK HERE!
 yum               3.0.6
 yum-epel          0.2.0
 ```
 
 Your cookbook should be in that list.
 
-That's is for now. Let's create a Role that includes a reference to our Cookbook.
+>That's is for now. Let's create a Role that includes a reference to our Cookbook.
 
 #### Create a Role ####
 
-* Create a new ```role``` by typing:
+* **Create** a new ```role``` by typing:
 
 ```bash
 $ knife role create role_<your_number>
@@ -187,16 +187,13 @@ If you've configured everyting correctly, an editor should open with the followi
 
 * Exit your editor. Changes should be uploaded automagically. Output should be similar to ```Created role[role_one]```
 
-* Verify your ```role``` by typing: ```knife role show role_one -F j```
+* **Verify** your ```role``` by typing: ```knife role show role_one -F j```
 
+>We've created a ```cookbook```, edited the default ```recipe``` and created a ```role```. Let's use those resources to provision an EC2 instance.
 
-```bash
-$ knife cookbook upload mycookbook
-```
+### Create an S3 Bucket ###
 
-### Bootstrap your EC2 Node ###
-
-First, we need an S3 Bucket to store some artifacts needed for provisioning our nodes.
+Before we continue, we need to create an S3 Bucket to store some artifacts needed for provisioning our nodes.
 
 * Goto the AWS Dashboard and select S3.
 * Create an S3 Bucket. Make sure you use Region 'Ireland' (```eu-west-1```).
@@ -213,105 +210,142 @@ Please select a different name and try again.
 
 This Git Repository contains a directory called ```chef-repo/.chef```. That directory contains a file called ```chef-validator.pem```. This file is the permissions certificate for communicating with the Chef Server.
 
-![eu-west-1](https://raw.github.com/paprins/aws-bootcamp/master/images/chef-run.png)
+* Upload ```.chef/chef-validator.pem``` to the root folder of your S3 Bucket. 
 
+### Bootstrap your EC2 Node ###
 
-* Upload ```.chef/chef-validator.pem``` to your S3 Bucket. 
+Now, let's create an EC2 instance using CloudFormation. Just like before, only now we'll use ```AWS::CloudFormation::Init``` and ```cfn-init``` to install the Chef software.
 
-* Make a copy of ```cfn-simple.json``` and name it ```cfn-simple-bootstrap.json``` 
+* **Open** CloudFormation template ```cloudformation/cfn-simple-cloudinit.json``` in a text-editor or your browser.
+* Search for ```AWS::CloudFormation::Init``` and study it's contents. Use the [documentation](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-init.html) if some parts are not clear.
+* Now, search for the ```UserData``` property of the ```AWS::EC2::Instance``` and study it's contents. Use the [documentation](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-waitcondition-article.html) if some parts are not clear.
+* **Go to** the CloudFormation dashboard and create a new Stack using the ```cfn-simple-cloudinit.json``` template. 
+* Use the following values:
 
-* Add the following ```Metadata``` snippet to the ```MyEc2Instance``` instance.
+ | Parameter | Description |
+ | --------- | ----------- |
+ | KeyName | The name of the keypair you generated earlier. |
+ | InstanceType | Instance type (use ```t1.micro``` for Free Tier) |
+ | ChefEnvironment | Reference to the Chef environment in which you would like to register this node (use ```development```) |
+ | ServerRole | Use the name of the Chef Role you created earlier (e.g. ```role_one```) |
+ | S3Bucket | The name of the S3 Bucket you created (not an url, just a name) |
+* **Create** the Stack.
 
-```json
-"Metadata": {
-  "AWS::CloudFormation::Init": {
-    "config": {
-      "packages": {
-        "yum": {
-          "ruby": [],
-          "rubygems": [],
-          "ruby-devel": [],
-          "make": [],
-          "glibc-devel": [],
-          "gcc": [],
-          "python-setuptools": []
-        },
-        "rubygems": {
-          "chef": [],
-          "ohai": []
-        }
-      },
-      "sources": {
-        "/etc/chef/": {
-          "Fn::Join": [
-            "",
-            [ "https://s3-eu-west-1.amazonaws.com/", {"Ref": "S3Bucket"}, "/chef-validator.pem" ]
-          ]
-        }
-      },
-      "files": {
-        "/etc/chef/client.rb": {
-          "content": {
-            "Fn::Join": [
-              "\n",
-              [
-                "log_location             STDOUT",
-                "validation_client_name   'chef-validator'",
-                { "Fn::Join": ["",["environment '",{"Ref": "ChefEnvironment"},"'"]] },
-                { "Fn::Join": ["",["chef_server_url '",{"Fn::FindInMap": ["Settings","Chef","ChefServerURL"]},"'"]] }
-              ]
-            ]
-          },
-          "mode": "000644",
-          "owner": "root",
-          "group": "root"
-        },
-        "/etc/chef/first-boot.json": {
-          "content": {
-            "run_list": [
-              {
-                "Fn::Join": ["",["role[",{"Ref": "ServerRole"},"]"]]
-              }
-            ]
-          },
-          "mode": "000644",
-          "owner": "root",
-          "group": "root"
-        }
-      },
-      "commands": {
-        "01ChefClientRun": {
-          "command": {
-            "Fn::Join": [""
-               ,["/usr/bin/chef-client -j /etc/chef/first-boot.json -E ",{"Ref": "ChefEnvironment"}
-               ," --logfile /etc/chef/first-boot.log"
-              ]
-            ]
-          }
-        }
-      }
-    }
-  },
-  "AWS::CloudFormation::Authentication": {
-    "S3AccessCreds": {
-      "type": "S3",
-      "accessKeyId": {"Ref": "HostKeys"},
-      "secretKey": {"Fn::GetAtt": ["HostKeys","SecretAccessKey"]},
-      "buckets": [ {"Ref": "S3Bucket"} ]
-    }
-  }
+The CloudFormation template is already prepped and ready to go, so it should create an EC2 instance that after 5 mins (or so) automagically registers with Chef, gets all relevant cookbooks and provisions that node.
+
+* After is Stack has been created (status = ```CREATE_COMPLETE```), check the EC2 dashboard and find the public IP address.
+
+* Log into to EC2 instance using SSH or Putty. 
+
+```bash
+ssh ec2-user@<public_ip> -i /path/to/private/keypair.pem
 ```
 
-For more info on Metadata and User Data see [here](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-init.html).
+* Check the log to verify everything is OK
+
+```bash
+sudo less /etc/chef/first-boot.log
+```
+
+>The ```cfn-init``` command logs it results to ```/var/log/cfn-init.log```. Take a look at that logfile as well.
+
+The Chef software should be installed. Verify by typing: ```chef-client``` ... Congratulations, you just triggered your first (manual) ```chef-client``` run (read [this](#anatomy-of-a-chef-client-run)). Look at the console and see what ```chef-client``` does.
+
+### Dev, Test, Publish, Repeat ###
+
+* **Open** the public IP of your instance in a browser. It should show a ```404 Not Found```.
+
+>The default ```document_root``` directory does not exist after installing the ```nginx``` package. You'll have to create that directory yourself. Let's use Chef to create that directory for us.
+
+* **Open** ```cookbooks/user_<your_number>/recipes/default.rb``` in your favorite editor and add the following (just before ```include_recipe "nginx"``` )
+
+```
+directory "/var/www/nginx-default" do
+   owner "nginx"
+   group "nginx"
+   mode "0755"
+   action :create
+   recursive true
+end
+
+file "/var/www/nginx-default/index.html" do
+   action :create
+   owner "nginx"
+   group "nginx"
+   mode "0644"
+   content <<-EOS
+Hello World from '#{node.name}' !
+EOS
+end
+```
+* **Upload** your changed cookbook to the Chef Server:
+
+```bash
+$ knife cookbook upload user_one
+```
+
+* Now, run ```chef-client``` again on your bootstrapped EC2 instance. The changes should be applied to your node. 
+* Verify by browsing to the public IP of your instance in a browser. It should show the ```Hello World``` message.
+
+>Notice that we used an attribute of the node in the recipe. Your free to use any attributes in your recipe.
+
+#### Provision the HTML5 App ###
+
+* **Upload** the ```app/h5demo.zip``` to your S3 Bucket. 
+* **Edit** ```cookbooks/recipes/default.rb``` and add the following on the bottom:
+
+```
+s3_file "/tmp/h5demo.zip" do
+   remote_path            "h5demo.zip"
+   bucket                 "<your_bucket>"
+   aws_access_key_id      "<your_aws_access_key>"
+   aws_secret_access_key  "<your_aws_secret_access_key>"
+   notifies :run, "execute[unzip]"
+end
+
+execute "unzip" do
+   action :nothing
+   only_if {::File.exists?('/tmp/h5demo.zip')}
+   cwd "/var/www/nginx-default"
+   command "unzip -o -j /tmp/h5demo.zip"
+end
+```
+
+>Notice the ```notifies```. This means that the ```.zip``` file will only be unzipped when the resource we downloaded from S3 actually changes (```s3_file``` actually looks at the MD5Hash or Etag to decide if it should download the resource)
+
+* **Edit** ```cookbooks/user_one/metadata.rb``` and add ```depends "s3_file"```
+
+* **Upload** your changed cookbook to the Chef Server:
+
+```bash
+$ knife cookbook upload user_one
+```
+
+* Now, run ```chef-client``` again on your bootstrapped EC2 instance. The changes should be applied to your node. 
+* Verify by browsing to the public IP of your instance in a browser. It should now show the HTML5 demo application we saw earlier.
+
+### Anatomy of a Chef Client Run ###
+
+The following figure shows the anatomy of an a ```chef-client``` run:
+
+![eu-west-1](https://raw.github.com/paprins/aws-bootcamp/master/images/chef-run.png)
 
 ## [EXTRA] Using Vagrant ##
+
+Should you have some time left, try to install and use [Vagrant](http://www.vagrantup.com). Vagrant support both AWS as a provider and [Chef](http://docs.vagrantup.com/v2/provisioning/chef_client.html) as a provisioner. I've already include a ```Vagrantfile```. 
 
 * Download (and install) Vagrant from [here](http://www.vagrantup.com/downloads.html)
 * Install the following Vagrant plugins, by typing:
  * ```vagrant plugin install vagrant-aws```
  * ```vagrant plugin install vagrant-omnibus```
+ * ```vagrant plugin install vagrant-butcher```
 * Verify installation of plugins by typing: ```vagrant plugin list```
+* Edit the ```Vagrantfile``` to your needs.
+* Type: ```$ vagrant up```
 
 More info about:
 * the ```vagrant-aws``` plugin here: https://github.com/mitchellh/vagrant-aws
 * the ```vagrant-omnibus``` plugin here: https://github.com/schisamo/vagrant-omnibus
+* the ```vagrant-butcher``` plugin here: https://github.com/cassianoleal/vagrant-butcher
+
+~ THE END
