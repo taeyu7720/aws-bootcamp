@@ -83,9 +83,9 @@ You've seen the presentation. So, you know about Roles, Cookbooks, Recipes, and 
 #### Create a Cookbook ###
 First, we'll create a new ```cookbook```. This ```cookbook``` will contain the recipes we need to provision our Amazon AWS EC2 instance.
 
->To prevent us from overwriting someone elses ```cookbook```, we need to use a unique name. We are using a single Chef Server repository. Unique names will be appointed during the workshop.
+>To prevent us from overwriting someone elses ```cookbook```, we need to use a unique name. We are using a single Chef Server repository. Unique names will be appointed to you during the workshop.
 
-1. Type: ```knife cookbook create user_<your_number>```, e.g. ```knife cookbook create user_one```
+* Type: ```knife cookbook create user_<your_number>```, e.g. ```knife cookbook create user_one```
 
 Output should be something like this:
 
@@ -95,6 +95,21 @@ Output should be something like this:
 ** Creating CHANGELOG for cookbook: user_one
 ** Creating metadata for cookbook: user_one
 ** Creating specs for cookbook: user_one
+```
+
+* Edit ```cookbooks/user_one/recipes/default.rb``` and add: ```include_recipe "nginx"```
+>The ```default.rb``` is called the default recipe (duuuh). This recipe is executed if no other recipe is mentioned when calling a cookbook from a run_list. 
+>We just added a reference to the ```nginx``` cookbook without reference to a specific recipe, so you now know that the *default* recipe will be executed. Curious what that recipe contains? See here: https://github.com/opscode-cookbooks/nginx
+
+* Edit ```cookbooks/user_one/metadata.rb``` and add ```depends "nginx"```
+
+* Upload Cookbook to Chef Server by typing:
+
+```bash
+$ knife cookbook upload user_one
+
+Uploading user_one       [0.1.0]
+Uploaded 1 cookbook.
 ```
 
 ### Create a Role ###
