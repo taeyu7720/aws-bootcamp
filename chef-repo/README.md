@@ -341,6 +341,17 @@ $ knife bootstrap <public_ip>
 ```
 [Documentation](http://docs.opscode.com/knife_bootstrap.html)
 
+## [EXTRA] Community Cookbooks ##
+
+Have a look at this: http://community.opscode.com/cookbooks and find your favorite cookbook. Try to apply to to your node.
+
+1. Download cookbook: ```knife cookbook site download <cookbook_name>```
+1. Unpack in cookbooks directory.
+1. Upload to Chef Server: ```knife cookbook upload <cookbook_name>```
+1. Modify ```default.rb``` (or create a new recipe) to include recipe from new cookbook.
+1. Converge node: ```chef-client --log_level info --logfile my.log```
+1. Verify.
+
 ## [EXTRA] Chef and Windows
 We only focussed on provisioning Chef on Linux based notes. You can use Chef to provision Windows nodes as well. The most simple way is to use the combination of ```AWS::CloudFormation::Init``` and ```UserData```.
 
@@ -349,7 +360,7 @@ For existing Windows servers, you can have two options:
 * use [```winrm```](http://msdn.microsoft.com/en-us/library/aa384426(v=vs.85).aspx)
 
 More info:
-* [```knife windows```](http://docs.opscode.com/plugin_knife_windows.html)
+* [knife windows](http://docs.opscode.com/plugin_knife_windows.html)
 * [Cooking on Windows with Chef](http://www.getchef.com/blog/2013/08/27/cooking-on-windows-with-chef/)
 
 ## [EXTRA] Using Vagrant ##
