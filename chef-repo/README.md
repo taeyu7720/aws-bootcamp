@@ -58,7 +58,7 @@ $ curl -L https://www.opscode.com/chef/install.sh | sudo bash
 You can test if your installation is ok by following these steps:
 
 * Open a Command Prompt or Shell and go to the ```chef-repo``` directory. (Remember: all Chef commands are executed from the so-called kitchen)
-* Type: ```knife client list```
+* **Type:** ```knife client list```
 
 It should display something like this:
 
@@ -89,7 +89,7 @@ First, we'll create a new ```cookbook```. This ```cookbook``` will contain the r
 
 >PPS: All ```knife``` commands should be executed from the ```chef-repo``` directory. This way, it can find the ```.chef/knife.rb``` configuration file. This file contains all information to reach the Chef Server.
 
-* Type: ```knife cookbook create user_<your_number>```, e.g. ```knife cookbook create user_one```
+* **Type:** ```knife cookbook create user_<your_number>```, e.g. ```knife cookbook create user_one```
 
 Output should be something like this:
 
@@ -115,6 +115,33 @@ $ knife cookbook upload user_one
 Uploading user_one       [0.1.0]
 Uploaded 1 cookbook.
 ```
+
+* Verify that your ```cookbook``` has been uploaded correctly:
+
+```bash
+$ knife cookbook list
+```
+
+**Output**
+```bash
+apt               2.3.4
+bluepill          2.3.1
+build-essential   1.4.2
+chef-client       3.2.2
+chef_handler      1.1.4
+cron              1.2.8
+logrotate         1.4.0
+nginx             2.2.2
+ohai              1.1.12
+rsyslog           1.10.2
+runit             1.5.8
+s3_file           2.3.0
+**user_one          0.1.0**
+yum               3.0.6
+yum-epel          0.2.0
+```
+
+Your cookbook should be in that list.
 
 That's is for now. Let's create a Role that includes a reference to our Cookbook.
 
@@ -162,13 +189,6 @@ If you've configured everyting correctly, an editor should open with the followi
 
 * Verify your ```role``` by typing: ```knife role show role_one -F j```
 
-### Create a Cookbook ####
-
-```bash
-$ knife cookbook create mycookbook
-```
-
-### Create a Recipe ###
 
 ```bash
 $ knife cookbook upload mycookbook
