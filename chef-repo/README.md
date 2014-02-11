@@ -330,6 +330,28 @@ The following figure shows the anatomy of an a ```chef-client``` run:
 
 ![eu-west-1](https://raw.github.com/paprins/aws-bootcamp/master/images/chef-run.png)
 
+## [EXTRA] Bootstrapping Existing Nodes ##
+
+```bash
+$ knife bootstrap <public_ip> 
+    --ssh-user <username> 
+    --sudo -i /path/to/private.pem 
+    --node-name <node_name> 
+    --run-list "role[role_one]"
+```
+[Documentation](http://docs.opscode.com/knife_bootstrap.html)
+
+## [EXTRA] Chef and Windows
+We only focussed on provisioning Chef on Linux based notes. You can use Chef to provision Windows nodes as well. The most simple way is to use the combination of ```AWS::CloudFormation::Init``` and ```UserData```.
+
+For existing Windows servers, you can have two options:
+* install an SSH server
+* use [```winrm```](http://msdn.microsoft.com/en-us/library/aa384426(v=vs.85).aspx)
+
+More info:
+* [```knife windows```](http://docs.opscode.com/plugin_knife_windows.html)
+* [Cooking on Windows with Chef](http://www.getchef.com/blog/2013/08/27/cooking-on-windows-with-chef/)
+
 ## [EXTRA] Using Vagrant ##
 
 Should you have some time left, try to install and use [Vagrant](http://www.vagrantup.com). Vagrant support both AWS as a provider and [Chef](http://docs.vagrantup.com/v2/provisioning/chef_client.html) as a provisioner. I've already include a ```Vagrantfile```. 
