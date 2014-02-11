@@ -21,12 +21,14 @@ To access AWS, you will need to sign up for an AWS account. If you already have 
 
 ##### To sign up for an AWS account #####
 
-1. Go to http://aws.amazon.com, and then click **Sign Up**.
+1. Go to http://aws.amazon.com/free/, and then click **Get Started for Free**.
 1. Follow the on-screen instructions.
 
 Part of the sign-up procedure involves receiving a phone call and entering a PIN using the phone keypad.
 
 AWS sends you a confirmation email after the sign-up process is complete. At any time, you can view your current account activity and manage your account by going to http://aws.amazon.com and clicking **My Account/Console**.
+
+You will not be charged unless your usage exceeds the free usage tiers. More info [here](http://docs.aws.amazon.com/gettingstarted/latest/awsgsg-intro/gsg-aws-free-tier.html.)
 
 #### Get your access key and secret access key ####
 

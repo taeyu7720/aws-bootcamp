@@ -30,7 +30,7 @@ This repository contains several directories, and each directory contains a READ
 Before you begin
 ===
 
-Make sure you've downloaded this Git repository to your machine. Just click [this](https://github.com/paprins/aws-bootcamp/archive/master.zip) link to download the ZIP file. 
+Make sure you've downloaded this Git repository to your machine. Just click [this link](https://github.com/paprins/aws-bootcamp/archive/master.zip) to download the ZIP file. 
 
 ## Exercise 1: Workstation Setup
 
@@ -67,6 +67,14 @@ chef-validator
 chef-webui
 workshop
 ```
+
+**Note:** if you get an error message when creating resources using the ```knife``` command like this:
+
+```bash
+Chef - ERROR: RuntimeError: Please set EDITOR environment variable.
+```
+
+On **Linux/OSX** you can fix this by typing ```export EDITOR=$(which nano)``` (or any other editor you would like to use). On **Windows**, create an environment variable ```EDITOR``` with value ```notepad```. Or, use an other editor, e.g. ```set EDITOR="C:\Program Files\Notepad++\notepad++.exe"```
 
 ## Exercise 2: My First Chef ##
 

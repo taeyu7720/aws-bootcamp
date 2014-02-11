@@ -222,21 +222,21 @@
                 "ohai": []
               }
             },
-            "sources": {
-              "/etc/chef/": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "https://s3-eu-west-1.amazonaws.com/",
-                    {
-                      "Ref": "S3Bucket"
-                    },
-                    "/chef-validator.pem"
-                  ]
-                ]
-              }
-            },
             "files": {
+              "/etc/chef/chef-validator.pem": {
+                "source":{
+                  "Fn::Join": [
+                    "",
+                    [
+                      "https://s3-eu-west-1.amazonaws.com/",
+                      {
+                        "Ref": "S3Bucket"
+                      },
+                      "/chef-validator.pem"
+                    ]
+                  ]
+                }
+              },
               "/etc/chef/client.rb": {
                 "content": {
                   "Fn::Join": [
@@ -244,6 +244,7 @@
                     [
                       "log_location             STDOUT",
                       "validation_client_name   'chef-validator'",
+                      "validation_key           '/etc/chef/chef-validator.pem'"
                       {
                         "Fn::Join": [
                           "",
