@@ -80,7 +80,22 @@ On **Linux/OSX** you can fix this by typing ```export EDITOR=$(which nano)``` (o
 
 You've seen the presentation. So, you know about Roles, Cookbooks, Recipes, and what not. Let's create some ourselves. The ultimate goal would be that we create an instance (same) and provision it using Chef. 
 
-> I assume you already cloned this Git repository or [downloaded](https://github.com/paprins/aws-bootcamp/archive/master.zip) it as as ZIP file. If you haven't, do so now.
+#### Create a Cookbook ###
+First, we'll create a new ```cookbook```. This ```cookbook``` will contain the recipes we need to provision our Amazon AWS EC2 instance.
+
+>To prevent us from overwriting someone elses ```cookbook```, we need to use a unique name. We are using a single Chef Server repository. Unique names will be appointed during the workshop.
+
+1. Type: ```knife cookbook create user_<your_number>```, e.g. ```knife cookbook create user_one```
+
+Output should be something like this:
+
+```bash
+** Creating cookbook user_one
+** Creating README for cookbook: user_one
+** Creating CHANGELOG for cookbook: user_one
+** Creating metadata for cookbook: user_one
+** Creating specs for cookbook: user_one
+```
 
 ### Create a Role ###
 
