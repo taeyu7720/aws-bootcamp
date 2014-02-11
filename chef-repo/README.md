@@ -116,13 +116,51 @@ Uploading user_one       [0.1.0]
 Uploaded 1 cookbook.
 ```
 
-### Create a Role ###
+That's is for now. Let's create a Role that includes a reference to our Cookbook.
 
-Make sure you
+#### Create a Role ####
+
+* Create a new ```role``` by typing:
 
 ```bash
-$ knife role create <your_id>
+$ knife role create role_<your_number>
 ```
+
+If you've configured everyting correctly, an editor should open with the following data:
+
+```json
+{
+  "name": "role_one",
+  "description": "",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+  },
+  "override_attributes": {
+  },
+  "chef_type": "role",
+  "run_list": [
+
+  ],
+  "env_run_lists": {
+  }
+}
+```
+
+* Modify the ```run_list``` to this:
+
+```json
+{
+  ...
+  "run_list": [
+    "recipe[user_one]"
+  ],
+  ...
+}
+```
+
+* Exit your editor. Changes should be uploaded automagically. Output should be similar to ```Created role[role_one]```
+
+* Verify your ```role``` by typing: ```knife role show role_one -F j```
 
 ### Create a Cookbook ####
 
