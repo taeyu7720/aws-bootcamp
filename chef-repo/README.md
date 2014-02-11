@@ -84,7 +84,9 @@ You've seen the presentation. So, you know about Roles, Cookbooks, Recipes, and 
 First, we'll create a new ```cookbook```. This ```cookbook``` will contain the recipes we need to provision our Amazon AWS EC2 instance.
 
 >To prevent us from overwriting someone elses ```cookbook```, we need to use a unique name. We are using a single Chef Server repository. Unique names will be appointed to you during the workshop.
+
 >PS: In this exercise, I'll be using ```user_one``` as an example.
+
 >PPS: All ```knife``` commands should be executed from the ```chef-repo``` directory. This way, it can find the ```.chef/knife.rb``` configuration file. This file contains all information to reach the Chef Server.
 
 * Type: ```knife cookbook create user_<your_number>```, e.g. ```knife cookbook create user_one```
