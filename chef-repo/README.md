@@ -341,6 +341,22 @@ $ knife bootstrap <public_ip>
 ```
 [Documentation](http://docs.opscode.com/knife_bootstrap.html)
 
+## [EXTRA] Attributes and Data Bags ##
+
+You might have noticed that we used hardcoded values in our recipe.
+
+```
+s3_file "/tmp/h5demo.zip" do
+   remote_path            "h5demo.zip"
+   bucket                 "<your_bucket>"
+   aws_access_key_id      "<your_aws_access_key>"
+   aws_secret_access_key  "<your_aws_secret_access_key>"
+   notifies :run, "execute[unzip]"
+end
+```
+
+Try to move the hardcoded values to either the [attributes](http://docs.opscode.com/essentials_cookbook_attribute_files.html) (```cookbooks/user_one/attributes/default.rb```) or create an (encrypted) [data bag](http://docs.opscode.com/essentials_data_bags.html) to hold these values.
+
 ## [EXTRA] Community Cookbooks ##
 
 Have a look at this: http://community.opscode.com/cookbooks and find your favorite cookbook. Try to apply to to your node.
