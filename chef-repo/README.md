@@ -4,6 +4,10 @@
 - [Before you begin](#before-you-begin)
 - [Exercise 1: Workstation Setup](#exercise-1-workstation-setup)
 - [Exercise 2: My First Chef](#exercise-2-my-first-chef)
+- [[EXTRA] Attributes and Data Bags](#extra-attributes-and-data-bags)
+- [[EXTRA] Bootstrapping Existing Nodes](#extra-bootstrapping-existing-nodes)
+- [[EXTRA] Community Cookbooks](#extra-community-cookbooks)
+- [[EXTRA] Chef and Windows](#extra-chef-and-windows)
 - [[EXTRA] Using Vagrant](#extra-using-vagrant)
 
 ## Overview ##
@@ -330,17 +334,6 @@ The following figure shows the anatomy of an a ```chef-client``` run:
 
 ![eu-west-1](https://raw.github.com/paprins/aws-bootcamp/master/images/chef-run.png)
 
-## [EXTRA] Bootstrapping Existing Nodes ##
-
-```bash
-$ knife bootstrap <public_ip> 
-    --ssh-user <username> 
-    --sudo -i /path/to/private.pem 
-    --node-name <node_name> 
-    --run-list "role[role_one]"
-```
-[Documentation](http://docs.opscode.com/knife_bootstrap.html)
-
 ## [EXTRA] Attributes and Data Bags ##
 
 You might have noticed that we used hardcoded values in our recipe.
@@ -356,6 +349,17 @@ end
 ```
 
 Try to move the hardcoded values to either the [attributes](http://docs.opscode.com/essentials_cookbook_attribute_files.html) (```cookbooks/user_one/attributes/default.rb```) or create an (encrypted) [data bag](http://docs.opscode.com/essentials_data_bags.html) to hold these values.
+
+## [EXTRA] Bootstrapping Existing Nodes ##
+
+```bash
+$ knife bootstrap <public_ip> 
+    --ssh-user <username> 
+    --sudo -i /path/to/private.pem 
+    --node-name <node_name> 
+    --run-list "role[role_one]"
+```
+[Documentation](http://docs.opscode.com/knife_bootstrap.html)
 
 ## [EXTRA] Community Cookbooks ##
 
