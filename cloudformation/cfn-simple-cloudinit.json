@@ -244,7 +244,7 @@
                     [
                       "log_location             STDOUT",
                       "validation_client_name   'chef-validator'",
-                      "validation_key           '/etc/chef/chef-validator.pem'"
+                      "validation_key           '/etc/chef/chef-validator.pem'",
                       {
                         "Fn::Join": [
                           "",
